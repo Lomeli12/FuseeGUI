@@ -1,4 +1,4 @@
-FuséeGUI
+# FuséeGUI
 
 A simple GUI for [Fusée Launcher](https://github.com/Qyriad/fusee-launcher). Made for a friend who isn't technically minded, but figured it could be useful for others, so here's a repo for it.
 
