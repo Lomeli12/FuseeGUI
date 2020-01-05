@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.IO;
 using Gtk;
 using UI = Gtk.Builder.ObjectAttribute;
@@ -10,11 +11,15 @@ namespace FuseeGUI {
         [UI] private TextView smashOutput = null;
         [UI] private FileChooserButton payloadBtn = null;
         [UI] private ScrolledWindow scrolledArea = null;
+        private BackgroundWorker backgroundWorker;
+        private DownloadQueue queue = new DownloadQueue();
+        private bool failed;
 
         public MainWindow() : this(new Builder("MainWindow.glade")) { }
 
         private MainWindow(Builder builder) : base(builder.GetObject("MainWindow").Handle) {
-            this.SetIconFromFile(System.IO.Path.Combine(Directory.GetCurrentDirectory(), "nintendo-switch.png")); 
+            this.SetIconFromFile(System.IO.Path.Combine(Directory.GetCurrentDirectory(), "nintendo-switch.png"));
+            backgroundWorker = new BackgroundWorker();
             builder.Autoconnect(this);
 
             // I had added this in glade, but it wouldn't take affect.
@@ -25,6 +30,8 @@ namespace FuseeGUI {
             DeleteEvent += windowDeleteEvent;
             smashPayloadBtn.ButtonReleaseEvent += smashPayloadBtnEvent;
             clearLogBtn.ButtonReleaseEvent += clearLogBtnEvent;
+            backgroundWorker.RunWorkerCompleted += backgroundWorkingComplete;
+            backgroundWorker.DoWork += backgroundDoWork;
         }
 
         private void smashPayloadBtnEvent(object sender, EventArgs args) {
@@ -33,19 +40,43 @@ namespace FuseeGUI {
                 return;
             }
 
-            sendMessage(string.Format("Attempting to smash with {0}.", payloadBtn.File.Basename));
+            sendMessage($"Attempting to smash with {payloadBtn.File.Basename}.");
 
             // Checking prerequisites
-            if (!FuseeHandler.checkAndDownloadFusee(this)) {
-                sendMessage("Could not download Fusée Launcher. Maybe your connection got interrupted?");
-                return;
-            }
             if (!FuseeHandler.hasPython3()) {
                 sendMessage("Please install Python 3 before continuing! Canceling smash...");
                 return;
             }
 
-            FuseeHandler.smashPayload(this, payloadBtn.File.Path);
+            //var queue = new DownloadQueueOld();
+            FuseeHandler.checkAndDownloadFusee(this, queue);
+            if (queue.isEmpty()) {
+                FuseeHandler.smashPayload(this, payloadBtn.File.Path);
+            } else {
+                sendMessage("Attempting to download missing files");
+                setStates(StateFlags.Insensitive);
+                backgroundWorker.RunWorkerAsync();
+            }
+        }
+
+        private void backgroundDoWork(object sender, DoWorkEventArgs args) {
+            if (queue.isEmpty()) return;
+            if (!queue.downloadFiles()) {
+                failed = true;
+            }
+
+            queue.clearQueue();
+            backgroundWorker.CancelAsync();
+        }
+
+        private void backgroundWorkingComplete(object sender, RunWorkerCompletedEventArgs args) {
+            if (failed) {
+                failed = false;
+                sendMessage("Failed to download missing files! Stopping...");
+            } else
+                FuseeHandler.smashPayload(this, payloadBtn.File.Path);
+
+            setStates(StateFlags.Active);
         }
 
         private void clearLogBtnEvent(object sender, EventArgs args) {
@@ -57,8 +88,15 @@ namespace FuseeGUI {
         }
 
         public void sendMessage(string msg) {
-            smashOutput.Buffer.Text += msg + "\n";
-            scrolledArea.Vadjustment.Value = scrolledArea.Vadjustment.Lower;
+            var endIter = smashOutput.Buffer.EndIter;
+            smashOutput.Buffer.Insert(endIter, msg + "\n");
+            scrolledArea.Vadjustment.Value = scrolledArea.Vadjustment.Upper;
+        }
+
+        private void setStates(StateFlags state) {
+            smashPayloadBtn.SetStateFlags(state, true);
+            clearLogBtn.SetStateFlags(state, true);
+            payloadBtn.SetStateFlags(state, true);
         }
     }
 }

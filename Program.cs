@@ -1,5 +1,6 @@
 using System;
-using Gtk;
+using GLib;
+using Application = Gtk.Application;
 
 namespace FuseeGUI {
     class Program {
@@ -7,8 +8,8 @@ namespace FuseeGUI {
         public static void Main(string[] args) {
             Application.Init();
 
-            var app = new Application("net.lomeli.FuseeGUI", GLib.ApplicationFlags.None);
-            app.Register(GLib.Cancellable.Current);
+            var app = new Application("net.lomeli.FuseeGUI", ApplicationFlags.None);
+            app.Register(Cancellable.Current);
 
             var win = new MainWindow();
             app.AddWindow(win);

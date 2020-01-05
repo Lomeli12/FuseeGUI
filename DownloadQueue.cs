@@ -1,12 +1,33 @@
 ﻿using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace FuseeGUI {
-    public class DownloadQueu {
-        private IList<DownloadFile> downloads;
+    public class DownloadQueue {
+        private IList<FileDownloader> filesToDownload;
 
-        public async Task runDownloads() {
-            
+        public DownloadQueue() {
+            this.filesToDownload = new List<FileDownloader>();
+        }
+
+        public bool downloadFiles() {
+            foreach (var downloader in filesToDownload) {
+                if (!downloader.downloadFile())
+                    return false;
+            }
+
+            return true;
+        }
+
+        public void addToQueue(FileDownloader fileDownloader) {
+            if (!filesToDownload.Contains(fileDownloader))
+                filesToDownload.Add(fileDownloader);
+        }
+
+        public void clearQueue() {
+            filesToDownload.Clear();
+        }
+
+        public bool isEmpty() {
+            return filesToDownload.Count == 0;
         }
     }
 }
