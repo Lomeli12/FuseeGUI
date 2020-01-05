@@ -1,10 +1,8 @@
 #!/bin/bash
 PLATFORM="null"
 
-if [[ $1 -eq 0 ]]; then
-    if [[ $1 == "linux" || $1 == "osx" || $1 == "win" ]]; then
-        PLATFORM=$1
-    fi
+if [[ ! -z $1 ]] && ([ $1 == "linux" ] || [ $1 == "osx" ] || [ $1 == "win" ]); then
+    PLATFORM=$1
 else
     case "$OSTYPE" in
         "linux-gnu"*)
@@ -25,6 +23,7 @@ fi
 
 if [[ PLATFORM != "null" ]]; then
     echo "Target Platform = $PLATFORM"
-    dotnet publish -c Release -r $PLATFORM-x64 //p:PublishSingleFile=true //p:PublishTrimmed=true
-    cp nintendo-switch.png "bin\\\Release\netcoreapp3.0\\$PLATFORM-x64\publish\\"
+    dotnet publish -c Release -r $PLATFORM-x64 /p:PublishSingleFile=true /p:PublishTrimmed=true
+    cp nintendo-switch.png bin/Release/netcoreapp3.0/$PLATFORM-x64/publish/
 fi
+
